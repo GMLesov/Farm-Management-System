@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd web-dashboard && npm install && npm run build",
+  "outputDirectory": "web-dashboard/build",
+  "installCommand": "npm install",
+  "framework": "react",
+  "env": {
+    "REACT_APP_API_URL": "@api_url",
+    "REACT_APP_SOCKET_URL": "@socket_url"
+  }
+}
