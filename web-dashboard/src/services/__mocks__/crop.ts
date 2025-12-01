@@ -1,0 +1,31 @@
+// Manual mock for services/crop
+const cropService = {
+  getAllCrops: jest.fn(),
+  getCropById: jest.fn(),
+  createCrop: jest.fn(),
+  updateCrop: jest.fn(),
+  deleteCrop: jest.fn(),
+  getCropTasks: jest.fn(),
+  createCropTask: jest.fn(),
+  updateCropTask: jest.fn(),
+  deleteCropTask: jest.fn(),
+  assignWorker: jest.fn(),
+  removeWorker: jest.fn(),
+  getWorkerAssignments: jest.fn(),
+  getCropAnalytics: jest.fn(),
+  getCropPredictions: jest.fn(),
+  searchCrops: jest.fn(),
+  addHarvestSchedule: jest.fn(),
+  updateHarvestSchedule: jest.fn(),
+  deleteHarvestSchedule: jest.fn(),
+  recordYield: jest.fn(),
+  getYieldRecords: jest.fn(),
+  logWorkHours: jest.fn(),
+  getWorkHourLogs: jest.fn(),
+  updateHealthStatus: jest.fn(),
+  addRecommendation: jest.fn(),
+  updateRecommendation: jest.fn(),
+  deleteRecommendation: jest.fn(),
+};
+
+export default cropService;

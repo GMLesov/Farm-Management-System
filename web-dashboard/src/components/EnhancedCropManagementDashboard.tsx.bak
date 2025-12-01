@@ -1,0 +1,1419 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Tabs,
+  Tab,
+  Button,
+  Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  Fab,
+  Tooltip,
+  Avatar,
+  LinearProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Alert,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Badge,
+} from '@mui/material';
+import { Unstable_Grid2 as Grid } from '@mui/material';
+import {
+  Agriculture,
+  Assignment,
+  TrendingUp,
+  Schedule,
+  Person,
+  PhotoCamera,
+  FilterList,
+  Sort,
+  Add,
+  Edit,
+  Delete,
+  Visibility,
+  CheckCircle,
+  Warning,
+  ErrorOutline,
+  CalendarToday,
+  Timer,
+  LocationOn,
+  Nature,
+  WaterDrop,
+  Eco,
+  Analytics,
+  Assignment as TaskIcon,
+  Groups,
+  MoreVert,
+  Timeline,
+  BarChart,
+  PieChart,
+  CloudUpload,
+  GetApp,
+  Refresh,
+} from '@mui/icons-material';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
+
+import { EnhancedCrop, CropTask, CropAnalytics, WorkerAssignment } from '../types/crop';
+import cropService from '../services/crop';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`crop-tabpanel-${index}`}
+      aria-labelledby={`crop-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+const EnhancedCropManagementDashboard: React.FC = () => {
+  const [tabValue, setTabValue] = useState(0);
+  const [crops, setCrops] = useState<EnhancedCrop[]>([]);
+  const [selectedCrop, setSelectedCrop] = useState<EnhancedCrop | null>(null);
+  const [tasks, setTasks] = useState<CropTask[]>([]);
+  const [analytics, setAnalytics] = useState<CropAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [workerDialogOpen, setWorkerDialogOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedCropForMenu, setSelectedCropForMenu] = useState<string | null>(null);
+
+  // Form states
+  const [cropForm, setCropForm] = useState({
+    name: '',
+    variety: '',
+    category: 'vegetables' as any,
+    fieldLocation: '',
+    area: '',
+    soilType: '',
+    plantingDate: '',
+    expectedHarvestDate: '',
+  });
+
+  const [taskForm, setTaskForm] = useState({
+    title: '',
+    description: '',
+    type: 'maintenance' as any,
+    priority: 'medium' as any,
+    scheduledDate: '',
+    dueDate: '',
+    estimatedHours: '',
+    assignedWorkers: [] as string[],
+  });
+
+  // Colors for charts
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [cropsData, analyticsData] = await Promise.all([
+        cropService.getAllCrops(),
+        cropService.getCropAnalytics(),
+      ]);
+      
+      setCrops(cropsData);
+      setAnalytics(analyticsData);
+      
+      if (cropsData.length > 0) {
+        setSelectedCrop(cropsData[0]);
+        const tasksData = await cropService.getCropTasks(cropsData[0].id);
+        setTasks(tasksData);
+      }
+    } catch (error) {
+      console.error('Failed to load crop data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const handleCropSelect = async (crop: EnhancedCrop) => {
+    setSelectedCrop(crop);
+    try {
+      const tasksData = await cropService.getCropTasks(crop.id);
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Failed to load crop tasks:', error);
+    }
+  };
+
+  const handleCreateCrop = async () => {
+    try {
+      const newCrop = await cropService.createCrop({
+        ...cropForm,
+        farmId: 'farm_1',
+        area: parseFloat(cropForm.area),
+        stage: {
+          current: 'planning',
+          progress: 0,
+          expectedDuration: 90,
+          milestones: []
+        },
+        growthProgress: 0,
+        assignedWorkers: [],
+        taskSchedule: [],
+        workHours: [],
+        varietyInfo: {
+          scientificName: '',
+          growthHabit: '',
+          maturityDays: 90,
+          yieldPotential: 0,
+          climateZone: [],
+          soilPreference: [],
+          waterRequirement: 'medium',
+          sunlightRequirement: 'full_sun',
+          spacing: { rowSpacing: 50, plantSpacing: 30 }
+        },
+        environmentalConditions: {
+          temperature: { min: 15, max: 30, average: 22, optimal: { min: 18, max: 28 } },
+          humidity: { current: 60, optimal: { min: 50, max: 70 } },
+          soilMoisture: { current: 60, optimal: { min: 55, max: 75 } },
+          ph: { current: 6.5, optimal: { min: 6.0, max: 7.0 } },
+          lightHours: 12,
+          lastUpdated: new Date().toISOString()
+        },
+        fertilizerPlan: [],
+        irrigationSchedule: [],
+        pestControlLog: [],
+        harvestSchedule: [],
+        qualityMetrics: {
+          overallGrade: 'B' as any,
+          size: { average: 0, range: { min: 0, max: 0 }, uniformity: 0 },
+          color: { score: 0, consistency: 0 },
+          defects: [],
+          pestDamage: 0,
+          diseasePresence: 0,
+          nutritionalValue: { vitamins: {}, minerals: {} },
+          shelfLife: 7,
+          lastAssessment: new Date().toISOString()
+        },
+        photos: [],
+        healthStatus: {
+          overall: 'good',
+          plantVigor: 80,
+          diseasePresence: [],
+          pestPresence: [],
+          nutritionalDeficiency: [],
+          stressFactors: [],
+          treatmentHistory: [],
+          lastAssessment: new Date().toISOString(),
+          nextAssessmentDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        riskFactors: [],
+        recommendations: [],
+        costs: [],
+        expectedRevenue: 0,
+        notes: '',
+        tags: [],
+        createdBy: 'user_1'
+      });
+      
+      setCrops([...crops, newCrop]);
+      setDialogOpen(false);
+      setCropForm({
+        name: '',
+        variety: '',
+        category: 'vegetables',
+        fieldLocation: '',
+        area: '',
+        soilType: '',
+        plantingDate: '',
+        expectedHarvestDate: '',
+      });
+    } catch (error) {
+      console.error('Failed to create crop:', error);
+    }
+  };
+
+  const getStageColor = (stage: string) => {
+    const colors: { [key: string]: string } = {
+      'planning': '#9E9E9E',
+      'preparation': '#FF9800',
+      'planting': '#4CAF50',
+      'germination': '#8BC34A',
+      'vegetative': '#2E7D32',
+      'flowering': '#E91E63',
+      'fruiting': '#F44336',
+      'maturation': '#FF5722',
+      'harvest': '#FF9800',
+      'post_harvest': '#795548'
+    };
+    return colors[stage] || '#9E9E9E';
+  };
+
+  const getHealthColor = (health: string) => {
+    const colors: { [key: string]: string } = {
+      'excellent': '#4CAF50',
+      'good': '#8BC34A',
+      'fair': '#FF9800',
+      'poor': '#FF5722',
+      'critical': '#F44336'
+    };
+    return colors[health] || '#9E9E9E';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    const colors: { [key: string]: string } = {
+      'low': '#4CAF50',
+      'medium': '#FF9800',
+      'high': '#FF5722',
+      'urgent': '#F44336'
+    };
+    return colors[priority] || '#9E9E9E';
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString();
+  };
+
+  const cropsByStageData = useMemo(() => {
+    if (!analytics) return [];
+    return Object.entries(analytics.cropsByStage).map(([stage, count]) => ({
+      name: stage.replace('_', ' ').toUpperCase(),
+      value: count,
+      fill: getStageColor(stage)
+    }));
+  }, [analytics]);
+
+  const yieldTrendData = useMemo(() => {
+    if (!analytics) return [];
+    return analytics.trends.yieldTrend.map(item => ({
+      month: item.date,
+      yield: item.yield / 1000, // Convert to tons
+    }));
+  }, [analytics]);
+
+  const profitTrendData = useMemo(() => {
+    if (!analytics) return [];
+    return analytics.trends.profitTrend.map((item, index) => ({
+      month: item.date,
+      profit: item.profit,
+      cost: analytics.trends.costTrend[index]?.cost || 0,
+      revenue: item.profit + (analytics.trends.costTrend[index]?.cost || 0),
+    }));
+  }, [analytics]);
+
+  if (loading) {
+    return (
+      <Box sx={{ width: '100%', mt: 2 }}>
+        <LinearProgress />
+        <Typography variant="h6" sx={{ mt: 2, textAlign: 'center' }}>
+          Loading Crop Management System...
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      {/* Header */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Grid item>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Enhanced Crop Management
+            </Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Comprehensive crop lifecycle management with worker integration
+            </Typography>
+          </Grid>
+          <Grid item>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setDialogOpen(true)}
+              sx={{ mr: 1 }}
+            >
+              Add Crop
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={loadData}
+            >
+              Refresh
+            </Button>
+          </Grid>
+        </Grid>
+
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          aria-label="crop management tabs"
+        >
+          <Tab icon={<Agriculture />} label="Overview" />
+          <Tab icon={<Assignment />} label="Crop Details" />
+          <Tab icon={<TaskIcon />} label="Task Management" />
+          <Tab icon={<Groups />} label="Worker Management" />
+          <Tab icon={<TrendingUp />} label="Analytics" />
+          <Tab icon={<Schedule />} label="Harvest Planning" />
+        </Tabs>
+      </Box>
+
+      {/* Overview Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <Grid container spacing={3}>
+          {/* Quick Stats */}
+          <Grid item xs={12}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Agriculture sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
+                      <Box>
+                        <Typography color="text.secondary" gutterBottom>
+                          Total Crops
+                        </Typography>
+                        <Typography variant="h4">
+                          {analytics?.totalCrops || 0}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <LocationOn sx={{ fontSize: 40, color: 'success.main', mr: 2 }} />
+                      <Box>
+                        <Typography color="text.secondary" gutterBottom>
+                          Total Area
+                        </Typography>
+                        <Typography variant="h4">
+                          {analytics?.totalArea || 0} ha
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <TrendingUp sx={{ fontSize: 40, color: 'info.main', mr: 2 }} />
+                      <Box>
+                        <Typography color="text.secondary" gutterBottom>
+                          Avg Yield
+                        </Typography>
+                        <Typography variant="h4">
+                          {((analytics?.averageYield || 0) / 1000).toFixed(1)}t
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Analytics sx={{ fontSize: 40, color: 'warning.main', mr: 2 }} />
+                      <Box>
+                        <Typography color="text.secondary" gutterBottom>
+                          Profit Margin
+                        </Typography>
+                        <Typography variant="h4">
+                          {(analytics?.profitMargin || 0).toFixed(1)}%
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </Grid>
+
+          {/* Crops by Stage Chart */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Crops by Growth Stage
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={cropsByStageData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {cropsByStageData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Recent Activity */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Recent Activity
+                </Typography>
+                <List>
+                  {crops.slice(0, 3).map((crop) => (
+                    <ListItem key={crop.id}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: getStageColor(crop.stage.current) }}>
+                          <Nature />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={crop.name}
+                        secondary={`Stage: ${crop.stage.current} • Progress: ${crop.growthProgress}%`}
+                      />
+                      <ListItemSecondaryAction>
+                        <Chip
+                          label={crop.stage.current}
+                          size="small"
+                          sx={{ bgcolor: getStageColor(crop.stage.current), color: 'white' }}
+                        />
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Crop List Overview */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  All Crops Overview
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Variety</TableCell>
+                        <TableCell>Stage</TableCell>
+                        <TableCell>Progress</TableCell>
+                        <TableCell>Area (ha)</TableCell>
+                        <TableCell>Assigned Workers</TableCell>
+                        <TableCell>Health</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {crops.map((crop) => (
+                        <TableRow key={crop.id} hover>
+                          <TableCell>
+                            <Typography variant="subtitle2">{crop.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {crop.fieldLocation}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{crop.variety}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={crop.stage.current}
+                              size="small"
+                              sx={{ bgcolor: getStageColor(crop.stage.current), color: 'white' }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <LinearProgress
+                                variant="determinate"
+                                value={crop.growthProgress}
+                                sx={{ flexGrow: 1, mr: 1 }}
+                              />
+                              <Typography variant="caption">
+                                {crop.growthProgress}%
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{crop.area}</TableCell>
+                          <TableCell>
+                            <Badge badgeContent={crop.assignedWorkers.length} color="primary">
+                              <Groups />
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={crop.healthStatus.overall}
+                              size="small"
+                              sx={{ bgcolor: getHealthColor(crop.healthStatus.overall), color: 'white' }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                setMenuAnchor(e.currentTarget);
+                                setSelectedCropForMenu(crop.id);
+                              }}
+                            >
+                              <MoreVert />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* Crop Details Tab */}
+      <TabPanel value={tabValue} index={1}>
+        {selectedCrop ? (
+          <Grid container spacing={3}>
+            {/* Crop Selection */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Select Crop for Details
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {crops.map((crop) => (
+                      <Grid item key={crop.id}>
+                        <Button
+                          variant={selectedCrop.id === crop.id ? "contained" : "outlined"}
+                          onClick={() => handleCropSelect(crop)}
+                          startIcon={<Nature />}
+                        >
+                          {crop.name}
+                        </Button>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Selected Crop Details */}
+            <Grid item xs={12} md={8}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h5" gutterBottom>
+                    {selectedCrop.name}
+                  </Typography>
+                  <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                    {selectedCrop.variety} • {selectedCrop.category}
+                  </Typography>
+
+                  <Grid container spacing={2} sx={{ mt: 2 }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Basic Information
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Field Location:</strong> {selectedCrop.fieldLocation}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Area:</strong> {selectedCrop.area} hectares
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Soil Type:</strong> {selectedCrop.soilType}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Planting Date:</strong> {formatDate(selectedCrop.plantingDate)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Expected Harvest:</strong> {formatDate(selectedCrop.expectedHarvestDate)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" gutterBottom>
+                        Current Status
+                      </Typography>
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="body2" gutterBottom>
+                          Growth Stage: {selectedCrop.stage.current}
+                        </Typography>
+                        <LinearProgress
+                          variant="determinate"
+                          value={selectedCrop.growthProgress}
+                          sx={{ mb: 1 }}
+                        />
+                        <Typography variant="caption">
+                          {selectedCrop.growthProgress}% Complete
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2">
+                        <strong>Health Status:</strong>{' '}
+                        <Chip
+                          label={selectedCrop.healthStatus.overall}
+                          size="small"
+                          sx={{ bgcolor: getHealthColor(selectedCrop.healthStatus.overall), color: 'white' }}
+                        />
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Plant Vigor:</strong> {selectedCrop.healthStatus.plantVigor}%
+                      </Typography>
+                    </Grid>
+                  </Grid>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Environmental Conditions */}
+                  <Typography variant="subtitle2" gutterBottom>
+                    Environmental Conditions
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        Temperature
+                      </Typography>
+                      <Typography variant="body2">
+                        {selectedCrop.environmentalConditions.temperature.average}°C
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        Humidity
+                      </Typography>
+                      <Typography variant="body2">
+                        {selectedCrop.environmentalConditions.humidity.current}%
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        Soil Moisture
+                      </Typography>
+                      <Typography variant="body2">
+                        {selectedCrop.environmentalConditions.soilMoisture.current}%
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        pH Level
+                      </Typography>
+                      <Typography variant="body2">
+                        {selectedCrop.environmentalConditions.ph.current}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Crop Summary Cards */}
+            <Grid item xs={12} md={4}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Financial Summary
+                      </Typography>
+                      <Typography variant="body2">
+                        Expected Revenue: {formatCurrency(selectedCrop.expectedRevenue)}
+                      </Typography>
+                      {selectedCrop.actualRevenue && (
+                        <Typography variant="body2">
+                          Actual Revenue: {formatCurrency(selectedCrop.actualRevenue)}
+                        </Typography>
+                      )}
+                      {selectedCrop.profitMargin && (
+                        <Typography variant="body2">
+                          Profit Margin: {selectedCrop.profitMargin}%
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        Assigned Workers
+                      </Typography>
+                      {selectedCrop.assignedWorkers.map((worker) => (
+                        <Box key={worker.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
+                            {worker.workerName.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2">{worker.workerName}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {worker.role}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        ) : (
+          <Alert severity="info">
+            Please select a crop to view detailed information.
+          </Alert>
+        )}
+      </TabPanel>
+
+      {/* Task Management Tab */}
+      <TabPanel value={tabValue} index={2}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Task Management {selectedCrop && `- ${selectedCrop.name}`}
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setTaskDialogOpen(true)}
+                disabled={!selectedCrop}
+              >
+                Add Task
+              </Button>
+            </Box>
+          </Grid>
+
+          {selectedCrop ? (
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Task</TableCell>
+                          <TableCell>Type</TableCell>
+                          <TableCell>Priority</TableCell>
+                          <TableCell>Status</TableCell>
+                          <TableCell>Assigned Workers</TableCell>
+                          <TableCell>Due Date</TableCell>
+                          <TableCell>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {tasks.map((task) => (
+                          <TableRow key={task.id}>
+                            <TableCell>
+                              <Typography variant="subtitle2">{task.title}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {task.description}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={task.type} size="small" variant="outlined" />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={task.priority}
+                                size="small"
+                                sx={{ bgcolor: getPriorityColor(task.priority), color: 'white' }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={task.status}
+                                size="small"
+                                color={task.status === 'completed' ? 'success' : 'default'}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Badge badgeContent={task.assignedWorkers.length} color="primary">
+                                <Groups />
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{formatDate(task.dueDate)}</TableCell>
+                            <TableCell>
+                              <IconButton size="small">
+                                <Edit />
+                              </IconButton>
+                              <IconButton size="small">
+                                <Delete />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+          ) : (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Please select a crop from the Overview or Crop Details tab to manage tasks.
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+      </TabPanel>
+
+      {/* Worker Management Tab */}
+      <TabPanel value={tabValue} index={3}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Worker Assignments
+            </Typography>
+          </Grid>
+
+          {selectedCrop ? (
+            <>
+              <Grid item xs={12}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6">
+                        Workers for {selectedCrop.name}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={() => setWorkerDialogOpen(true)}
+                      >
+                        Assign Worker
+                      </Button>
+                    </Box>
+
+                    <Grid container spacing={2}>
+                      {selectedCrop.assignedWorkers.map((worker) => (
+                        <Grid item xs={12} sm={6} md={4} key={worker.id}>
+                          <Card variant="outlined">
+                            <CardContent>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                <Avatar sx={{ mr: 2 }}>
+                                  {worker.workerName.charAt(0)}
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="h6">{worker.workerName}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {worker.role}
+                                  </Typography>
+                                </Box>
+                              </Box>
+
+                              <Typography variant="body2" gutterBottom>
+                                <strong>Responsibilities:</strong>
+                              </Typography>
+                              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                                {worker.responsibilities.map((resp, index) => (
+                                  <li key={index}>
+                                    <Typography variant="caption">{resp}</Typography>
+                                  </li>
+                                ))}
+                              </ul>
+
+                              <Box sx={{ mt: 2 }}>
+                                <Typography variant="body2" gutterBottom>
+                                  Performance Metrics:
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Efficiency: {worker.performance.efficiency}%
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Quality Score: {worker.performance.qualityScore}%
+                                </Typography>
+                                <Typography variant="caption" display="block">
+                                  Tasks Completed: {worker.performance.tasksCompleted}
+                                </Typography>
+                              </Box>
+
+                              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                <Button size="small" startIcon={<Edit />}>
+                                  Edit
+                                </Button>
+                                <Button size="small" color="error" startIcon={<Delete />}>
+                                  Remove
+                                </Button>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </>
+          ) : (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                Please select a crop to view and manage worker assignments.
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+      </TabPanel>
+
+      {/* Analytics Tab */}
+      <TabPanel value={tabValue} index={4}>
+        <Grid container spacing={3}>
+          {/* Yield Trend */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Yield Trend (Tons)
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={yieldTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Line type="monotone" dataKey="yield" stroke="#8884d8" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Profit vs Cost */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Financial Performance
+                </Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsBarChart data={profitTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar dataKey="revenue" fill="#4CAF50" name="Revenue" />
+                    <Bar dataKey="cost" fill="#FF5722" name="Cost" />
+                    <Bar dataKey="profit" fill="#2196F3" name="Profit" />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Performance Metrics */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Performance Metrics
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="primary">
+                        {analytics?.productivity.workHoursPerHectare.toFixed(1) || 0}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Work Hours per Hectare
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="success.main">
+                        {analytics?.productivity.yieldPerWorkerHour.toFixed(1) || 0}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Yield per Worker Hour (kg)
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="warning.main">
+                        ${analytics?.productivity.costPerKg.toFixed(2) || 0}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Cost per Kg
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Box textAlign="center">
+                      <Typography variant="h4" color="info.main">
+                        ${analytics?.productivity.revenuePerHectare.toFixed(0) || 0}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Revenue per Hectare
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Top Performing Crops */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Top Performing Crops
+                </Typography>
+                <List>
+                  {analytics?.topPerformingCrops.map((crop, index) => (
+                    <ListItem key={crop.cropId}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: COLORS[index % COLORS.length] }}>
+                          {index + 1}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={crop.name}
+                        secondary={`Yield: ${(crop.yield / 1000).toFixed(1)}t • ROI: ${crop.roi.toFixed(1)}%`}
+                      />
+                      <ListItemSecondaryAction>
+                        <Typography variant="h6" color="success.main">
+                          {formatCurrency(crop.profit)}
+                        </Typography>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Worker Performance */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Worker Performance
+                </Typography>
+                <List>
+                  {analytics?.workerPerformance.map((worker, index) => (
+                    <ListItem key={worker.workerId}>
+                      <ListItemAvatar>
+                        <Avatar>{worker.name.charAt(0)}</Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={worker.name}
+                        secondary={`Tasks: ${worker.tasksCompleted} • Quality: ${worker.averageQuality}%`}
+                      />
+                      <ListItemSecondaryAction>
+                        <Typography variant="body2" color="primary">
+                          {worker.efficiency}% Efficiency
+                        </Typography>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* Harvest Planning Tab */}
+      <TabPanel value={tabValue} index={5}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Harvest Planning & Scheduling
+            </Typography>
+          </Grid>
+
+          {/* Upcoming Harvests */}
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Upcoming Harvests
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Crop</TableCell>
+                        <TableCell>Expected Date</TableCell>
+                        <TableCell>Estimated Yield</TableCell>
+                        <TableCell>Workers Required</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {crops
+                        .filter(crop => ['fruiting', 'maturation'].includes(crop.stage.current))
+                        .map((crop) => (
+                          <TableRow key={crop.id}>
+                            <TableCell>
+                              <Typography variant="subtitle2">{crop.name}</Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {crop.fieldLocation}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>{formatDate(crop.expectedHarvestDate)}</TableCell>
+                            <TableCell>
+                              {((crop.varietyInfo.yieldPotential * crop.area) / 1000).toFixed(1)} tons
+                            </TableCell>
+                            <TableCell>{crop.assignedWorkers.length}</TableCell>
+                            <TableCell>
+                              <Chip
+                                label={crop.stage.current}
+                                size="small"
+                                sx={{ bgcolor: getStageColor(crop.stage.current), color: 'white' }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button size="small" variant="outlined">
+                                Schedule
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Harvest Calendar */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Harvest Calendar
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Quick overview of harvest timing
+                </Typography>
+                
+                {crops.map((crop) => (
+                  <Box key={crop.id} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'grey.300', borderRadius: 1 }}>
+                    <Typography variant="subtitle2">{crop.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Expected: {formatDate(crop.expectedHarvestDate)}
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={crop.growthProgress}
+                      sx={{ mt: 1 }}
+                    />
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* Dialogs */}
+      
+      {/* Add Crop Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Crop</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Crop Name"
+                value={cropForm.name}
+                onChange={(e) => setCropForm({...cropForm, name: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Variety"
+                value={cropForm.variety}
+                onChange={(e) => setCropForm({...cropForm, variety: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={cropForm.category}
+                  onChange={(e) => setCropForm({...cropForm, category: e.target.value as any})}
+                >
+                  <MenuItem value="vegetables">Vegetables</MenuItem>
+                  <MenuItem value="fruits">Fruits</MenuItem>
+                  <MenuItem value="grains">Grains</MenuItem>
+                  <MenuItem value="herbs">Herbs</MenuItem>
+                  <MenuItem value="legumes">Legumes</MenuItem>
+                  <MenuItem value="flowers">Flowers</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Field Location"
+                value={cropForm.fieldLocation}
+                onChange={(e) => setCropForm({...cropForm, fieldLocation: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Area (hectares)"
+                type="number"
+                value={cropForm.area}
+                onChange={(e) => setCropForm({...cropForm, area: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Soil Type"
+                value={cropForm.soilType}
+                onChange={(e) => setCropForm({...cropForm, soilType: e.target.value})}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Planting Date"
+                type="date"
+                value={cropForm.plantingDate}
+                onChange={(e) => setCropForm({...cropForm, plantingDate: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Expected Harvest Date"
+                type="date"
+                value={cropForm.expectedHarvestDate}
+                onChange={(e) => setCropForm({...cropForm, expectedHarvestDate: e.target.value})}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreateCrop} variant="contained">
+            Create Crop
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Context Menu */}
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem onClick={() => {
+          const crop = crops.find(c => c.id === selectedCropForMenu);
+          if (crop) handleCropSelect(crop);
+          setMenuAnchor(null);
+        }}>
+          <Visibility sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        <MenuItem onClick={() => setMenuAnchor(null)}>
+          <Edit sx={{ mr: 1 }} />
+          Edit Crop
+        </MenuItem>
+        <MenuItem onClick={() => setMenuAnchor(null)}>
+          <PhotoCamera sx={{ mr: 1 }} />
+          Add Photos
+        </MenuItem>
+        <MenuItem onClick={() => setMenuAnchor(null)} sx={{ color: 'error.main' }}>
+          <Delete sx={{ mr: 1 }} />
+          Delete Crop
+        </MenuItem>
+      </Menu>
+
+      {/* Floating Action Button */}
+      <Fab
+        color="primary"
+        aria-label="add"
+        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        onClick={() => setDialogOpen(true)}
+      >
+        <Add />
+      </Fab>
+    </Box>
+  );
+};
+
+export default EnhancedCropManagementDashboard;

@@ -1,0 +1,24 @@
+{
+  "name": "farm-management-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for Farm Management System",
+  "scripts": {
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/jest": "^29.5.5",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "cypress": "^13.6.0",
+    "supertest": "^6.3.3",
+    "ts-jest": "^29.1.1"
+  }
+}

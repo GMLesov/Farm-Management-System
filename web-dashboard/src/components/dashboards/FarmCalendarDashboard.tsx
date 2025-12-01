@@ -1,0 +1,611 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Chip,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Badge,
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  Tooltip,
+  Stack
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Event as EventIcon,
+  Work as WorkIcon,
+  EventBusy as OffIcon,
+  Celebration as SpecialIcon,
+  ChevronLeft as PrevIcon,
+  ChevronRight as NextIcon,
+  Today as TodayIcon,
+  Person as PersonIcon,
+  BeachAccess as LeaveIcon
+} from '@mui/icons-material';
+
+interface CalendarEvent {
+  id: number;
+  title: string;
+  date: string;
+  type: 'work' | 'off' | 'leave' | 'special';
+  workers?: string[];
+  description?: string;
+  color: string;
+}
+
+interface Worker {
+  id: number;
+  name: string;
+  avatar: string;
+}
+
+const FarmCalendarDashboard: React.FC = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [openEventDialog, setOpenEventDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    date: new Date().toISOString().split('T')[0],
+    type: 'special' as 'work' | 'off' | 'leave' | 'special',
+    workers: [] as string[],
+    description: ''
+  });
+
+  const workers: Worker[] = [
+    { id: 1, name: 'John Doe', avatar: 'JD' },
+    { id: 2, name: 'Jane Smith', avatar: 'JS' },
+    { id: 3, name: 'Mike Johnson', avatar: 'MJ' },
+    { id: 4, name: 'Sarah Williams', avatar: 'SW' },
+    { id: 5, name: 'Tom Brown', avatar: 'TB' }
+  ];
+
+  const [events, setEvents] = useState<CalendarEvent[]>([
+    // Working days
+    { id: 1, title: 'John Doe - Morning Shift', date: '2025-11-14', type: 'work', workers: ['John Doe'], color: '#4caf50' },
+    { id: 2, title: 'Jane Smith - Morning Shift', date: '2025-11-14', type: 'work', workers: ['Jane Smith'], color: '#4caf50' },
+    { id: 3, title: 'Mike Johnson - Afternoon Shift', date: '2025-11-14', type: 'work', workers: ['Mike Johnson'], color: '#4caf50' },
+    { id: 4, title: 'Tom Brown - Morning Shift', date: '2025-11-14', type: 'work', workers: ['Tom Brown'], color: '#4caf50' },
+    
+    // Days off
+    { id: 5, title: 'Sarah Williams - Day Off', date: '2025-11-14', type: 'off', workers: ['Sarah Williams'], color: '#9e9e9e' },
+    { id: 6, title: 'Jane Smith - Rest Day', date: '2025-11-15', type: 'off', workers: ['Jane Smith'], color: '#9e9e9e' },
+    { id: 7, title: 'John Doe - Rest Day', date: '2025-11-16', type: 'off', workers: ['John Doe'], color: '#9e9e9e' },
+    
+    // Leave
+    { id: 8, title: 'Sarah Williams - Annual Leave', date: '2025-11-15', type: 'leave', workers: ['Sarah Williams'], description: 'Approved vacation', color: '#ff9800' },
+    { id: 9, title: 'Mike Johnson - Sick Leave', date: '2025-11-20', type: 'leave', workers: ['Mike Johnson'], description: 'Medical appointment', color: '#ff9800' },
+    
+    // Special events
+    { id: 10, title: 'Farm Equipment Maintenance Day', date: '2025-11-18', type: 'special', description: 'Annual equipment inspection and maintenance', color: '#2196f3' },
+    { id: 11, title: 'Safety Training', date: '2025-11-22', type: 'special', description: 'Mandatory safety training for all workers', color: '#2196f3' },
+    { id: 12, title: 'Harvest Festival', date: '2025-11-28', type: 'special', description: 'Community harvest celebration', color: '#9c27b0' },
+    { id: 13, title: 'Farm Inspection', date: '2025-11-25', type: 'special', description: 'Government regulatory inspection', color: '#f44336' }
+  ]);
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    return { daysInMonth, startingDayOfWeek, year, month };
+  };
+
+  const getMonthName = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const handleAddEvent = () => {
+    const event: CalendarEvent = {
+      id: events.length + 1,
+      title: newEvent.title,
+      date: newEvent.date,
+      type: newEvent.type,
+      workers: newEvent.workers,
+      description: newEvent.description,
+      color: getEventColor(newEvent.type)
+    };
+    setEvents([...events, event]);
+    setOpenEventDialog(false);
+    setNewEvent({ title: '', date: new Date().toISOString().split('T')[0], type: 'special', workers: [], description: '' });
+  };
+
+  const handleEditEvent = () => {
+    if (!selectedEvent) return;
+    setEvents(events.map(e => e.id === selectedEvent.id ? selectedEvent : e));
+    setOpenEditDialog(false);
+    setSelectedEvent(null);
+  };
+
+  const handleDeleteEvent = (id: number) => {
+    setEvents(events.filter(e => e.id !== id));
+    setOpenEditDialog(false);
+    setSelectedEvent(null);
+  };
+
+  const getEventColor = (type: string) => {
+    switch (type) {
+      case 'work': return '#4caf50';
+      case 'off': return '#9e9e9e';
+      case 'leave': return '#ff9800';
+      case 'special': return '#2196f3';
+      default: return '#2196f3';
+    }
+  };
+
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case 'work': return <WorkIcon />;
+      case 'off': return <OffIcon />;
+      case 'leave': return <LeaveIcon />;
+      case 'special': return <SpecialIcon />;
+      default: return <EventIcon />;
+    }
+  };
+
+  const getEventsForDate = (dateStr: string) => {
+    return events.filter(e => e.date === dateStr);
+  };
+
+  const renderCalendar = () => {
+    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentDate);
+    const days = [];
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    // Week day headers
+    const headers = weekDays.map(day => (
+      <Box 
+        key={day} 
+        sx={{ 
+          p: { xs: 0.5, sm: 1 }, 
+          textAlign: 'center', 
+          fontWeight: 'bold', 
+          bgcolor: 'primary.main',
+          color: 'white',
+          borderBottom: '2px solid',
+          borderColor: 'divider',
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }}
+      >
+        {day}
+      </Box>
+    ));
+
+    // Empty cells before first day
+    const emptyCells = Array(startingDayOfWeek).fill(null).map((_, index) => (
+      <Box 
+        key={`empty-${index}`} 
+        sx={{ 
+          p: { xs: 0.5, sm: 1 }, 
+          minHeight: { xs: 80, sm: 100, md: 120 }, 
+          border: '1px solid', 
+          borderColor: 'divider', 
+          bgcolor: 'grey.100' 
+        }} 
+      />
+    ));
+
+    // Day cells
+    const dayCells = Array(daysInMonth).fill(null).map((_, index) => {
+      const day = index + 1;
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayEvents = getEventsForDate(dateStr);
+      const isToday = dateStr === new Date().toISOString().split('T')[0];
+
+      return (
+        <Box
+          key={day}
+          sx={{
+            p: { xs: 0.5, sm: 1 },
+            minHeight: { xs: 80, sm: 100, md: 120 },
+            border: '1px solid',
+            borderColor: isToday ? 'primary.main' : 'divider',
+            borderWidth: isToday ? '2px' : '1px',
+            bgcolor: isToday ? 'primary.50' : 'background.paper',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            '&:hover': { 
+              bgcolor: 'action.hover',
+              boxShadow: 1
+            },
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          <Typography 
+            variant="subtitle2" 
+            fontWeight="bold" 
+            sx={{ 
+              mb: 0.5,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: isToday ? 'primary.main' : 'text.primary'
+            }}
+          >
+            {day}
+          </Typography>
+          <Box sx={{ 
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.25,
+            '&::-webkit-scrollbar': {
+              width: '4px'
+            },
+            '&::-webkit-scrollbar-thumb': {
+              bgcolor: 'grey.400',
+              borderRadius: '4px'
+            }
+          }}>
+            {dayEvents.map((event, idx) => (
+              <Tooltip key={idx} title={event.description || event.title} arrow>
+                <Chip
+                  icon={getEventIcon(event.type)}
+                  label={event.title.length > 20 ? event.title.substring(0, 20) + '...' : event.title}
+                  size="small"
+                  sx={{
+                    width: '100%',
+                    justifyContent: 'flex-start',
+                    bgcolor: event.color,
+                    color: 'white',
+                    fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                    height: { xs: 18, sm: 22 },
+                    '& .MuiChip-icon': {
+                      fontSize: { xs: '0.75rem', sm: '1rem' },
+                      marginLeft: '4px'
+                    },
+                    '&:hover': {
+                      opacity: 0.9,
+                      transform: 'scale(1.02)'
+                    },
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setOpenEditDialog(true);
+                  }}
+                />
+              </Tooltip>
+            ))}
+          </Box>
+        </Box>
+      );
+    });
+
+    days.push(...emptyCells, ...dayCells);
+
+    return (
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(7, 1fr)', 
+        gap: 0,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        overflow: 'hidden',
+        boxShadow: 1
+      }}>
+        {headers}
+        {days}
+      </Box>
+    );
+  };
+
+  const getUpcomingEvents = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return events
+      .filter(e => e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
+  };
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" sx={{ fontWeight: 700, mb: 0 }}>
+        Farm Calendar
+      </Typography>
+      <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 3 }}>
+        View and manage farm events, tasks, and schedules
+      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 3 }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenEventDialog(true)}
+          sx={{ display: { xs: 'none', md: 'flex' } }}
+        >
+          Add Event
+        </Button>
+      </Box>
+
+      {/* Legend */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+            Legend
+          </Typography>
+          <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Chip icon={<WorkIcon />} label="Working" size="small" sx={{ bgcolor: '#4caf50', color: 'white' }} />
+            <Chip icon={<OffIcon />} label="Day Off" size="small" sx={{ bgcolor: '#9e9e9e', color: 'white' }} />
+            <Chip icon={<LeaveIcon />} label="Leave" size="small" sx={{ bgcolor: '#ff9800', color: 'white' }} />
+            <Chip icon={<SpecialIcon />} label="Special Event" size="small" sx={{ bgcolor: '#2196f3', color: 'white' }} />
+          </Stack>
+        </CardContent>
+      </Card>
+
+      <Grid container spacing={3}>
+        {/* Calendar */}
+        <Grid size={{ xs: 12, lg: 9 }}>
+          <Paper sx={{ p: 2 }}>
+            {/* Calendar Controls */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton onClick={handlePrevMonth} size="small">
+                  <PrevIcon />
+                </IconButton>
+                <Button variant="outlined" startIcon={<TodayIcon />} onClick={handleToday} size="small">
+                  Today
+                </Button>
+                <IconButton onClick={handleNextMonth} size="small">
+                  <NextIcon />
+                </IconButton>
+              </Box>
+              <Typography variant="h4" sx={{ fontWeight: 700, mb: 3 }}>
+                Farm Calendar
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenEventDialog(true)}
+                size="small"
+                sx={{ display: { xs: 'flex', md: 'none' } }}
+              >
+                Add
+              </Button>
+            </Box>
+
+            {/* Calendar Grid */}
+            {renderCalendar()}
+          </Paper>
+        </Grid>
+
+        {/* Upcoming Events Sidebar */}
+        <Grid size={{ xs: 12, lg: 3 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Upcoming Events
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <List sx={{ p: 0 }}>
+                {getUpcomingEvents().map((event) => (
+                  <Paper key={event.id} elevation={0} sx={{ mb: 1.5, p: 1.5, bgcolor: 'grey.50' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
+                      <Avatar sx={{ width: 32, height: 32, bgcolor: event.color }}>
+                        {getEventIcon(event.type)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight="bold">
+                          {event.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </Typography>
+                        {event.description && (
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {event.description}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  </Paper>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
+
+          {/* Statistics */}
+          <Card sx={{ mt: 2 }}>
+            <CardContent>
+              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                This Month
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">Work Days</Typography>
+                  <Typography variant="body2" fontWeight="bold">{events.filter(e => e.type === 'work').length}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">Days Off</Typography>
+                  <Typography variant="body2" fontWeight="bold">{events.filter(e => e.type === 'off').length}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">Leave Requests</Typography>
+                  <Typography variant="body2" fontWeight="bold">{events.filter(e => e.type === 'leave').length}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" color="text.secondary">Special Events</Typography>
+                  <Typography variant="body2" fontWeight="bold">{events.filter(e => e.type === 'special').length}</Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Add Event Dialog */}
+      <Dialog open={openEventDialog} onClose={() => setOpenEventDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Event</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Event Title"
+            value={newEvent.title}
+            onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+            sx={{ mt: 2, mb: 2 }}
+          />
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Event Type</InputLabel>
+            <Select
+              value={newEvent.type}
+              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as any })}
+              label="Event Type"
+            >
+              <MenuItem value="work">Work Schedule</MenuItem>
+              <MenuItem value="off">Day Off</MenuItem>
+              <MenuItem value="leave">Leave</MenuItem>
+              <MenuItem value="special">Special Event</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            type="date"
+            label="Date"
+            value={newEvent.date}
+            onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ mb: 2 }}
+          />
+
+          {(newEvent.type === 'work' || newEvent.type === 'off' || newEvent.type === 'leave') && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Select Workers</InputLabel>
+              <Select
+                multiple
+                value={newEvent.workers}
+                onChange={(e) => setNewEvent({ ...newEvent, workers: e.target.value as string[] })}
+                label="Select Workers"
+                renderValue={(selected) => selected.join(', ')}
+              >
+                {workers.map((worker) => (
+                  <MenuItem key={worker.id} value={worker.name}>
+                    {worker.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Description (Optional)"
+            value={newEvent.description}
+            onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEventDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddEvent} disabled={!newEvent.title || !newEvent.date}>
+            Add Event
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Event Dialog */}
+      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Event Details</DialogTitle>
+        <DialogContent>
+          {selectedEvent && (
+            <Box sx={{ pt: 2 }}>
+              <TextField
+                fullWidth
+                label="Event Title"
+                value={selectedEvent.title}
+                onChange={(e) => setSelectedEvent({ ...selectedEvent, title: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Event Type</InputLabel>
+                <Select
+                  value={selectedEvent.type}
+                  onChange={(e) => setSelectedEvent({ ...selectedEvent, type: e.target.value as any, color: getEventColor(e.target.value) })}
+                  label="Event Type"
+                >
+                  <MenuItem value="work">Work Schedule</MenuItem>
+                  <MenuItem value="off">Day Off</MenuItem>
+                  <MenuItem value="leave">Leave</MenuItem>
+                  <MenuItem value="special">Special Event</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                type="date"
+                label="Date"
+                value={selectedEvent.date}
+                onChange={(e) => setSelectedEvent({ ...selectedEvent, date: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{ mb: 2 }}
+              />
+
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Description"
+                value={selectedEvent.description || ''}
+                onChange={(e) => setSelectedEvent({ ...selectedEvent, description: e.target.value })}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={() => selectedEvent && handleDeleteEvent(selectedEvent.id)}
+          >
+            Delete
+          </Button>
+          <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleEditEvent}>
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default FarmCalendarDashboard;

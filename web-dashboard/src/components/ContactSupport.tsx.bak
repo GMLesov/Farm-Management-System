@@ -1,0 +1,254 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  Button,
+  Alert,
+  Card,
+  CardContent,
+  Link as MuiLink,
+  CircularProgress,
+  Stack,
+} from '@mui/material';
+import {
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationIcon,
+  Send as SendIcon,
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+
+interface ContactFormData {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+const ContactSupport: React.FC = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<ContactFormData>({
+    name: '',
+    email: '',
+    subject: '',
+    message: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleChange = (field: keyof ContactFormData) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: event.target.value }));
+    setError('');
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      setError('Please fill in all fields');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // In production: await apiService.post('/support/contact', formData);
+      
+      setSuccess(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+      
+      setTimeout(() => {
+        navigate(-1);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        bgcolor: 'grey.50',
+        py: 4,
+        px: 2,
+      }}
+    >
+      <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ mb: 3 }}
+        >
+          Back
+        </Button>
+
+        <Typography variant="h4" gutterBottom align="center" sx={{ mb: 1 }}>
+          Contact Support
+        </Typography>
+        <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
+          We're here to help! Send us a message and we'll respond as soon as possible.
+        </Typography>
+
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+          {/* Contact Form */}
+          <Box sx={{ flex: { xs: 1, md: 2 } }}>
+            <Paper sx={{ p: 4 }}>
+              {success && (
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  Thank you for contacting us! We've received your message and will respond within 24 hours.
+                </Alert>
+              )}
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <Stack spacing={2}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      fullWidth
+                      label="Your Name"
+                      value={formData.name}
+                      onChange={handleChange('name')}
+                      disabled={loading || success}
+                      required
+                    />
+                    <TextField
+                      fullWidth
+                      label="Email Address"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange('email')}
+                      disabled={loading || success}
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Subject"
+                      value={formData.subject}
+                      onChange={handleChange('subject')}
+                      disabled={loading || success}
+                      required
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Message"
+                      multiline
+                      rows={6}
+                      value={formData.message}
+                      onChange={handleChange('message')}
+                      disabled={loading || success}
+                      required
+                      placeholder="Describe your issue or question in detail..."
+                    />
+                  <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      disabled={loading || success}
+                      startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
+                    >
+                      {loading ? 'Sending...' : 'Send Message'}
+                    </Button>
+                </Stack>
+              </form>
+            </Paper>
+          </Box>
+
+          {/* Contact Info */}
+          <Box sx={{ flex: { xs: 1, md: 1 } }}>
+            <Card sx={{ mb: 2 }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <EmailIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Email
+                    </Typography>
+                    <MuiLink href="mailto:support@farmmanager.com">
+                      support@farmmanager.com
+                    </MuiLink>
+                  </Box>
+                </Box>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <PhoneIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Phone
+                    </Typography>
+                    <MuiLink href="tel:+1-555-FARM-HELP">
+                      +1 (555) FARM-HELP
+                    </MuiLink>
+                  </Box>
+                </Box>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <LocationIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Address
+                    </Typography>
+                    <Typography variant="body2">
+                      123 Agriculture Way<br />
+                      Farm City, FC 12345
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Support Hours
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Monday - Friday: 8:00 AM - 6:00 PM<br />
+                  Saturday: 9:00 AM - 4:00 PM<br />
+                  Sunday: Closed
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Response time: Within 24 hours
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </Stack>
+      </Box>
+    </Box>
+  );
+};
+
+export default ContactSupport;

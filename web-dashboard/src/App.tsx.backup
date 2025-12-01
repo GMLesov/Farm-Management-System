@@ -1,0 +1,210 @@
+import React from 'react';
+import { Provider } from 'react-redux';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { Box } from '@mui/material';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { store } from './store';
+import FarmManagementDashboard from './components/FarmManagementDashboard';
+import Login from './components/Login';
+import FarmRegistration from './components/FarmRegistration';
+import ContactSupport from './components/ContactSupport';
+import ProtectedRoute from './components/ProtectedRoute';
+import SelectFarm from './components/SelectFarm';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#2e7d32', // Green for agriculture theme
+    },
+    secondary: {
+      main: '#f57c00', // Orange accent
+    },
+    background: {
+      default: '#f5f5f5',
+    },
+  },
+  typography: {
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 500,
+    },
+  },
+});
+
+function App() {
+  return (
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <BrowserRouter>
+          <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<FarmRegistration />} />
+              <Route path="/contact" element={<ContactSupport />} />
+              <Route
+                path="/select-farm"
+                element={
+                  <ProtectedRoute>
+                    <SelectFarm />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Dashboard and section routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/overview"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/animals"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/crops"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/irrigation"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/financial"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/weather"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/workers"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/equipment"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventory"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/animal-health"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/crop-planning"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute>
+                    <FarmManagementDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Box>
+        </BrowserRouter>
+      </ThemeProvider>
+    </Provider>
+  );
+}
+
+export default App;

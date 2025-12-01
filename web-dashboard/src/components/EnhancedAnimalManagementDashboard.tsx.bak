@@ -1,0 +1,1215 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  Tabs,
+  Tab,
+  Card,
+  CardContent,
+  CardMedia,
+  Avatar,
+  Chip,
+  Button,
+  IconButton,
+  Fab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  LinearProgress,
+  Alert,
+  AlertTitle,
+  Tooltip,
+  Badge,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Stack,
+  Rating,
+  CircularProgress
+} from '@mui/material';
+import {
+  Pets as PetsIcon,
+  Add as AddIcon,
+  PhotoCamera as PhotoCameraIcon,
+  HealthAndSafety as HealthIcon,
+  LocalHospital as MedicalIcon,
+  Assignment as TaskIcon,
+  Analytics as AnalyticsIcon,
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
+  LocationOn as LocationIcon,
+  FilterList as FilterIcon,
+  Sort as SortIcon,
+  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as ViewIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon,
+  CalendarToday as CalendarIcon,
+  AttachMoney as MoneyIcon,
+  Psychology as InsightsIcon,
+  Notifications as NotificationsIcon,
+  Group as GroupIcon,
+  Timeline as TimelineIcon
+} from '@mui/icons-material';
+import { 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  RadialBarChart,
+  RadialBar,
+  ScatterChart,
+  Scatter
+} from 'recharts';
+import { format, differenceInDays, differenceInMonths } from 'date-fns';
+import animalService from '../services/animal';
+import { 
+  EnhancedAnimal, 
+  AnimalAnalytics, 
+  AnimalFilter, 
+  AnimalSortOption,
+  AnimalPhoto,
+  CareTask,
+  AnimalInsights,
+  PredictiveData,
+  AnimalStatus
+} from '../types/animal';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`animal-tabpanel-${index}`}
+      aria-labelledby={`animal-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#0088fe'];
+
+const EnhancedAnimalManagementDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(0);
+  const [animals, setAnimals] = useState<EnhancedAnimal[]>([]);
+  const [selectedAnimal, setSelectedAnimal] = useState<EnhancedAnimal | null>(null);
+  const [analytics, setAnalytics] = useState<AnimalAnalytics | null>(null);
+  const [insights, setInsights] = useState<AnimalInsights | null>(null);
+  const [predictions, setPredictions] = useState<PredictiveData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Filter and sort states
+  const [filter, setFilter] = useState<AnimalFilter>({});
+  const [sort, setSort] = useState<AnimalSortOption>({ field: 'name', direction: 'asc' });
+  
+  // Dialog states
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openPhotoDialog, setOpenPhotoDialog] = useState(false);
+  const [openTaskDialog, setOpenTaskDialog] = useState(false);
+  
+  // Menu states
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedAnimalForMenu, setSelectedAnimalForMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, [filter, sort]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [animalsResponse, analyticsResponse] = await Promise.all([
+        animalService.getAllAnimals(filter, sort),
+        animalService.getAnimalAnalytics()
+      ]);
+
+      if (animalsResponse.success && animalsResponse.data) {
+        setAnimals(animalsResponse.data);
+      }
+
+      if (analyticsResponse.success && analyticsResponse.data) {
+        setAnalytics(analyticsResponse.data);
+      }
+
+      setError(null);
+    } catch (err) {
+      setError('Failed to load animal data');
+      console.error('Error loading data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAnimalDetails = async (animalId: string) => {
+    try {
+      const [insightsResponse, predictionsResponse] = await Promise.all([
+        animalService.getAnimalInsights(animalId),
+        animalService.getPredictiveAnalytics(animalId)
+      ]);
+
+      if (insightsResponse.success) {
+        setInsights(insightsResponse.data);
+      }
+
+      if (predictionsResponse.success) {
+        setPredictions(predictionsResponse.data);
+      }
+    } catch (err) {
+      console.error('Error loading animal details:', err);
+    }
+  };
+
+  const handleAnimalSelect = (animal: EnhancedAnimal) => {
+    setSelectedAnimal(animal);
+    loadAnimalDetails(animal.id);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  const getStatusColor = (status: AnimalStatus): string => {
+    const colors = {
+      active: '#4caf50',
+      pregnant: '#ff9800',
+      lactating: '#2196f3',
+      sick: '#f44336',
+      quarantined: '#9c27b0',
+      breeding: '#ff5722',
+      retired: '#607d8b',
+      sold: '#795548',
+      deceased: '#424242'
+    };
+    return colors[status] || '#757575';
+  };
+
+  const getHealthScoreColor = (score: number): string => {
+    if (score >= 90) return '#4caf50';
+    if (score >= 80) return '#8bc34a';
+    if (score >= 70) return '#ffeb3b';
+    if (score >= 60) return '#ff9800';
+    return '#f44336';
+  };
+
+  const calculateAge = (birthDate: string): string => {
+    const months = differenceInMonths(new Date(), new Date(birthDate));
+    if (months < 12) {
+      return `${months} months`;
+    }
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    return remainingMonths > 0 ? `${years}y ${remainingMonths}m` : `${years} years`;
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  // Overview Tab Content
+  const renderOverviewTab = () => (
+    <Grid container spacing={3}>
+      {/* Summary Cards */}
+      <Grid item xs={12} md={3}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Animals
+                </Typography>
+                <Typography variant="h4">
+                  {analytics?.totalAnimals || 0}
+                </Typography>
+              </Box>
+              <Avatar sx={{ bgcolor: '#1976d2' }}>
+                <PetsIcon />
+              </Avatar>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={3}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Avg Health Score
+                </Typography>
+                <Typography variant="h4" sx={{ color: getHealthScoreColor(analytics?.healthOverview.averageHealthScore || 0) }}>
+                  {analytics?.healthOverview.averageHealthScore || 0}%
+                </Typography>
+              </Box>
+              <Avatar sx={{ bgcolor: '#4caf50' }}>
+                <HealthIcon />
+              </Avatar>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={3}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Production
+                </Typography>
+                <Typography variant="h4">
+                  {analytics?.productionSummary.totalProduction || 0}
+                </Typography>
+              </Box>
+              <Avatar sx={{ bgcolor: '#ff9800' }}>
+                <TrendingUpIcon />
+              </Avatar>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={3}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Photos
+                </Typography>
+                <Typography variant="h4">
+                  {analytics?.photoSummary.totalPhotos || 0}
+                </Typography>
+              </Box>
+              <Avatar sx={{ bgcolor: '#9c27b0' }}>
+                <PhotoCameraIcon />
+              </Avatar>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Charts */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Animals by Species
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={Object.entries(analytics?.animalsBySpecies || {}).map(([species, count]) => ({
+                    name: species,
+                    value: count
+                  }))}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {Object.entries(analytics?.animalsBySpecies || {}).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Health Trends
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics?.trends.healthTrends || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line type="monotone" dataKey="score" stroke="#4caf50" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Recent Alerts */}
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Recent Alerts & Notifications
+            </Typography>
+            <Stack spacing={2}>
+              <Alert severity="warning" icon={<WarningIcon />}>
+                <AlertTitle>Health Alert</AlertTitle>
+                Cow #C024 showing signs of lameness - veterinary examination recommended
+              </Alert>
+              <Alert severity="info" icon={<NotificationsIcon />}>
+                <AlertTitle>Vaccination Due</AlertTitle>
+                5 animals due for annual vaccinations this week
+              </Alert>
+              <Alert severity="success" icon={<CheckCircleIcon />}>
+                <AlertTitle>Breeding Success</AlertTitle>
+                Holstein #C015 confirmed pregnant - expected delivery in 8 months
+              </Alert>
+            </Stack>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+
+  // Animal List Tab Content
+  const renderAnimalListTab = () => (
+    <Box>
+      {/* Filters and Controls */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box display="flex" gap={2} alignItems="center">
+          <Button
+            variant="outlined"
+            startIcon={<FilterIcon />}
+            onClick={() => {/* Open filter dialog */}}
+          >
+            Filter
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<SortIcon />}
+            onClick={() => {/* Open sort dialog */}}
+          >
+            Sort
+          </Button>
+          <TextField
+            placeholder="Search animals..."
+            variant="outlined"
+            size="small"
+            value={filter.searchQuery || ''}
+            onChange={(e) => setFilter({ ...filter, searchQuery: e.target.value })}
+          />
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setOpenAddDialog(true)}
+        >
+          Add Animal
+        </Button>
+      </Box>
+
+      {/* Animal Grid */}
+      <Grid container spacing={3}>
+        {animals.map((animal) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={animal.id}>
+            <Card 
+              sx={{ 
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 4
+                }
+              }}
+              onClick={() => handleAnimalSelect(animal)}
+            >
+              <CardMedia
+                component="img"
+                height="200"
+                image={animal.photos[0]?.thumbnail || 'https://via.placeholder.com/300x200?text=No+Photo'}
+                alt={animal.name}
+              />
+              <CardContent>
+                <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
+                  <Typography variant="h6" noWrap>
+                    {animal.name}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAnchorEl(e.currentTarget);
+                      setSelectedAnimalForMenu(animal.id);
+                    }}
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
+                </Box>
+                
+                <Typography variant="body2" color="textSecondary" gutterBottom>
+                  {animal.breed} • {animal.tagNumber}
+                </Typography>
+                
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <Chip
+                    label={animal.status}
+                    size="small"
+                    sx={{ 
+                      bgcolor: getStatusColor(animal.status),
+                      color: 'white'
+                    }}
+                  />
+                  <Typography variant="caption" color="textSecondary">
+                    {calculateAge(animal.birthDate)}
+                  </Typography>
+                </Box>
+
+                <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <HealthIcon fontSize="small" />
+                    <Typography variant="body2">
+                      {animal.performanceMetrics.healthScore}%
+                    </Typography>
+                  </Box>
+                  <Badge badgeContent={animal.photos.length} color="primary">
+                    <PhotoCameraIcon fontSize="small" />
+                  </Badge>
+                </Box>
+
+                {animal.insights.alertsAndWarnings.length > 0 && (
+                  <Alert severity="warning" sx={{ mt: 1 }}>
+                    {animal.insights.alertsAndWarnings.length} alert(s)
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Animal Actions Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+      >
+        <MenuItem onClick={() => {/* View details */}}>
+          <ListItemIcon><ViewIcon /></ListItemIcon>
+          <ListItemText>View Details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => {/* Edit animal */}}>
+          <ListItemIcon><EditIcon /></ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => setOpenPhotoDialog(true)}>
+          <ListItemIcon><PhotoCameraIcon /></ListItemIcon>
+          <ListItemText>Add Photo</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => setOpenTaskDialog(true)}>
+          <ListItemIcon><TaskIcon /></ListItemIcon>
+          <ListItemText>Add Task</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => {/* Delete animal */}}>
+          <ListItemIcon><DeleteIcon /></ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
+    </Box>
+  );
+
+  // Photo Management Tab Content
+  const renderPhotoManagementTab = () => (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h5">Photo Management</Typography>
+        <Button
+          variant="contained"
+          startIcon={<PhotoCameraIcon />}
+          onClick={() => setOpenPhotoDialog(true)}
+        >
+          Upload Photo
+        </Button>
+      </Box>
+
+      {selectedAnimal ? (
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            {selectedAnimal.name} - Photos ({selectedAnimal.photos.length})
+          </Typography>
+          
+          {/* Photo Analytics */}
+          <Grid container spacing={3} mb={3}>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Photos
+                  </Typography>
+                  <Typography variant="h4">
+                    {selectedAnimal.photoAnalytics.totalPhotos}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    AI Analysis Success
+                  </Typography>
+                  <Typography variant="h4">
+                    {selectedAnimal.photoAnalytics.aiAnalysisSuccess}%
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Avg Quality Score
+                  </Typography>
+                  <Typography variant="h4">
+                    {selectedAnimal.photoAnalytics.averageQuality}/10
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Card>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Storage Used
+                  </Typography>
+                  <Typography variant="h4">
+                    {selectedAnimal.photoAnalytics.storageUsed}MB
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Photo Grid */}
+          <Grid container spacing={2}>
+            {selectedAnimal.photos.map((photo) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={photo.id}>
+                <Card>
+                  <CardMedia
+                    component="img"
+                    height="200"
+                    image={photo.url}
+                    alt={photo.caption}
+                  />
+                  <CardContent>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {photo.caption}
+                    </Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Chip
+                        label={photo.type}
+                        size="small"
+                        color="primary"
+                      />
+                      <Typography variant="caption">
+                        {format(new Date(photo.takenAt), 'MMM dd, yyyy')}
+                      </Typography>
+                    </Box>
+                    {photo.aiAnalysis && (
+                      <Box>
+                        <Typography variant="caption" color="textSecondary">
+                          AI Confidence: {photo.aiAnalysis.confidence}%
+                        </Typography>
+                        {photo.aiAnalysis.bodyConditionScore && (
+                          <Typography variant="caption" display="block">
+                            Body Condition: {photo.aiAnalysis.bodyConditionScore}/9
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    <Rating
+                      value={photo.quality.overallScore / 2}
+                      readOnly
+                      size="small"
+                      sx={{ mt: 1 }}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      ) : (
+        <Alert severity="info">
+          Select an animal to view its photos
+        </Alert>
+      )}
+    </Box>
+  );
+
+  // Health & Medical Tab Content
+  const renderHealthMedicalTab = () => (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Health & Medical Records
+      </Typography>
+
+      {selectedAnimal ? (
+        <Grid container spacing={3}>
+          {/* Health Status Overview */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Health Status
+                </Typography>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <CircularProgress
+                    variant="determinate"
+                    value={selectedAnimal.performanceMetrics.healthScore}
+                    size={60}
+                    sx={{ color: getHealthScoreColor(selectedAnimal.performanceMetrics.healthScore) }}
+                  />
+                  <Box>
+                    <Typography variant="h4">
+                      {selectedAnimal.performanceMetrics.healthScore}%
+                    </Typography>
+                    <Typography color="textSecondary">
+                      Health Score
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Overall Status: {selectedAnimal.healthStatus.overall}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Last exam: {format(new Date(selectedAnimal.healthStatus.lastExamination), 'MMM dd, yyyy')}
+                </Typography>
+                <Typography variant="body2" color="textSecondary">
+                  Next exam: {format(new Date(selectedAnimal.healthStatus.nextExamination), 'MMM dd, yyyy')}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Medical Records */}
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Recent Medical Records
+                </Typography>
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Veterinarian</TableCell>
+                        <TableCell>Diagnosis</TableCell>
+                        <TableCell>Cost</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedAnimal.medicalHistory.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            {format(new Date(record.date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>{record.type}</TableCell>
+                          <TableCell>{record.veterinarian}</TableCell>
+                          <TableCell>{record.diagnosis}</TableCell>
+                          <TableCell>{formatCurrency(record.cost)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Vaccinations */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Vaccination Records
+                </Typography>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Vaccine</TableCell>
+                        <TableCell>Disease</TableCell>
+                        <TableCell>Date Given</TableCell>
+                        <TableCell>Next Due</TableCell>
+                        <TableCell>Administered By</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedAnimal.vaccinations.map((vaccination) => (
+                        <TableRow key={vaccination.id}>
+                          <TableCell>{vaccination.vaccine}</TableCell>
+                          <TableCell>{vaccination.disease}</TableCell>
+                          <TableCell>
+                            {format(new Date(vaccination.date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(vaccination.nextDue), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>{vaccination.administeredBy}</TableCell>
+                          <TableCell>
+                            {new Date(vaccination.nextDue) > new Date() ? (
+                              <Chip label="Current" color="success" size="small" />
+                            ) : (
+                              <Chip label="Due" color="warning" size="small" />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      ) : (
+        <Alert severity="info">
+          Select an animal to view its health records
+        </Alert>
+      )}
+    </Box>
+  );
+
+  // Analytics Tab Content
+  const renderAnalyticsTab = () => (
+    <Grid container spacing={3}>
+      {/* Production Trends */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Production Trends
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={analytics?.trends.productionTrends || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <RechartsTooltip />
+                <Line type="monotone" dataKey="quantity" stroke="#ff9800" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Cost Trends */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Cost Trends
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={analytics?.trends.costTrends || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <RechartsTooltip />
+                <Area type="monotone" dataKey="cost" stroke="#f44336" fill="#f44336" fillOpacity={0.3} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Performance Metrics */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Farm Performance vs Industry
+            </Typography>
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Farm Performance: {analytics?.benchmarks.farmPerformance}%
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={analytics?.benchmarks.farmPerformance || 0}
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+            </Box>
+            <Box mb={2}>
+              <Typography variant="body2" gutterBottom>
+                Industry Average: {analytics?.benchmarks.industryAverage}%
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={analytics?.benchmarks.industryAverage || 0}
+                color="secondary"
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+            </Box>
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Top Percentile: {analytics?.benchmarks.topPercentile}%
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={analytics?.benchmarks.topPercentile || 0}
+                color="success"
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Top Producers */}
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Top Producers
+            </Typography>
+            <Box>
+              {analytics?.productionSummary.topProducers.map((producer, index) => (
+                <Box key={producer.animalId} display="flex" justifyContent="space-between" alignItems="center" py={1}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="h6" color="primary">
+                      #{index + 1}
+                    </Typography>
+                    <Typography>{producer.name}</Typography>
+                  </Box>
+                  <Typography variant="h6">
+                    {producer.production}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Financial Summary */}
+      <Grid item xs={12}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Financial Performance
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="primary">
+                    {formatCurrency(analytics?.financialSummary.totalValue || 0)}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    Total Value
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="success.main">
+                    {formatCurrency(analytics?.financialSummary.totalRevenue || 0)}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    Total Revenue
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="error.main">
+                    {formatCurrency(analytics?.financialSummary.totalCosts || 0)}
+                  </Typography>
+                  <Typography color="textSecondary">
+                    Total Costs
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Typography variant="h4" color="info.main">
+                    {analytics?.financialSummary.roi || 0}%
+                  </Typography>
+                  <Typography color="textSecondary">
+                    ROI
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+  );
+
+  // Insights & Predictions Tab Content
+  const renderInsightsPredictionsTab = () => (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        AI Insights & Predictions
+      </Typography>
+
+      {selectedAnimal && insights && predictions ? (
+        <Grid container spacing={3}>
+          {/* Health Predictions */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Health Predictions
+                </Typography>
+                {predictions.healthPredictions.map((prediction, index) => (
+                  <Box key={index} mb={2} p={2} border={1} borderColor="grey.300" borderRadius={1}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {prediction.condition}
+                    </Typography>
+                    <Box display="flex" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2">
+                        Probability: {prediction.probability}%
+                      </Typography>
+                      <Typography variant="body2">
+                        Confidence: {prediction.confidenceLevel}%
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="textSecondary">
+                      Timeframe: {prediction.timeframe}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" mt={1}>
+                      Prevention: {prediction.prevention.join(', ')}
+                    </Typography>
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Production Forecasts */}
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Production Forecasts
+                </Typography>
+                {predictions.productionForecasts.map((forecast, index) => (
+                  <Box key={index} mb={2} p={2} border={1} borderColor="grey.300" borderRadius={1}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {forecast.productType}
+                    </Typography>
+                    <Typography variant="h5" color="primary" gutterBottom>
+                      {forecast.predictedQuantity}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Period: {forecast.forecastPeriod}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Range: {forecast.confidenceInterval.lower} - {forecast.confidenceInterval.upper}
+                    </Typography>
+                    <Box mt={1}>
+                      {forecast.recommendations.map((rec, recIndex) => (
+                        <Chip key={recIndex} label={rec} size="small" sx={{ mr: 1, mb: 1 }} />
+                      ))}
+                    </Box>
+                  </Box>
+                ))}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Recommendations */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  AI Recommendations
+                </Typography>
+                <Grid container spacing={2}>
+                  {insights.recommendations.map((rec) => (
+                    <Grid item xs={12} md={6} key={rec.id}>
+                      <Box p={2} border={1} borderColor="grey.300" borderRadius={1}>
+                        <Box display="flex" justifyContent="space-between" alignItems="start" mb={1}>
+                          <Typography variant="subtitle1">
+                            {rec.title}
+                          </Typography>
+                          <Chip
+                            label={rec.priority}
+                            size="small"
+                            color={rec.priority === 'urgent' ? 'error' : rec.priority === 'high' ? 'warning' : 'default'}
+                          />
+                        </Box>
+                        <Typography variant="body2" paragraph>
+                          {rec.description}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary" paragraph>
+                          {rec.reasoning}
+                        </Typography>
+                        {rec.cost && (
+                          <Typography variant="body2">
+                            Estimated cost: {formatCurrency(rec.cost)}
+                          </Typography>
+                        )}
+                        <Typography variant="body2">
+                          Timeline: {rec.timeline}
+                        </Typography>
+                        <Box mt={2}>
+                          <Button variant="outlined" size="small" sx={{ mr: 1 }}>
+                            Approve
+                          </Button>
+                          <Button variant="text" size="small">
+                            Dismiss
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      ) : (
+        <Alert severity="info">
+          Select an animal to view AI insights and predictions
+        </Alert>
+      )}
+    </Box>
+  );
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error">
+        {error}
+      </Alert>
+    );
+  }
+
+  return (
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Enhanced Animal Management
+        </Typography>
+        <Box display="flex" gap={2}>
+          <Button variant="outlined" startIcon={<DownloadIcon />}>
+            Export Data
+          </Button>
+          <Button variant="outlined" startIcon={<ShareIcon />}>
+            Share Report
+          </Button>
+        </Box>
+      </Box>
+
+      <Paper sx={{ width: '100%' }}>
+        <Tabs
+          value={activeTab}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Overview" icon={<AnalyticsIcon />} />
+          <Tab label="Animal List" icon={<PetsIcon />} />
+          <Tab label="Photo Management" icon={<PhotoCameraIcon />} />
+          <Tab label="Health & Medical" icon={<MedicalIcon />} />
+          <Tab label="Analytics" icon={<TimelineIcon />} />
+          <Tab label="AI Insights" icon={<InsightsIcon />} />
+        </Tabs>
+
+        <TabPanel value={activeTab} index={0}>
+          {renderOverviewTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          {renderAnimalListTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          {renderPhotoManagementTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          {renderHealthMedicalTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          {renderAnalyticsTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={5}>
+          {renderInsightsPredictionsTab()}
+        </TabPanel>
+      </Paper>
+
+      {/* Floating Action Button for Quick Photo */}
+      <Fab
+        color="primary"
+        aria-label="add photo"
+        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+        onClick={() => setOpenPhotoDialog(true)}
+      >
+        <PhotoCameraIcon />
+      </Fab>
+
+      {/* Dialogs would be implemented here */}
+      {/* Add Animal Dialog */}
+      {/* Photo Upload Dialog */}
+      {/* Task Creation Dialog */}
+    </Box>
+  );
+};
+
+export default EnhancedAnimalManagementDashboard;

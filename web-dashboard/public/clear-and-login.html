@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache and Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .info {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .success {
+            color: #28a745;
+            margin-top: 20px;
+            display: none;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Clear Browser Cache</h1>
+        <p class="info">Click the button below to clear all browser storage and reload the login page fresh.</p>
+        
+        <button onclick="clearAndReload()">Clear Storage & Reload</button>
+        <button onclick="testBackend()">Test Backend Connection</button>
+        
+        <div id="status" class="status" style="display:none;"></div>
+        <div id="success" class="success">✓ Storage cleared! Redirecting...</div>
+    </div>
+
+    <script>
+        function clearAndReload() {
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            // Show success message
+            document.getElementById('success').style.display = 'block';
+            
+            // Redirect to home after 1 second
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        }
+
+        async function testBackend() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = 'Testing backend connection...';
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/health');
+                const data = await response.json();
+                
+                statusDiv.innerHTML = `
+                    <strong>✓ Backend Connected!</strong><br>
+                    Status: ${response.status}<br>
+                    Message: ${data.message || 'OK'}<br>
+                    Database: ${data.database || 'Unknown'}
+                `;
+                statusDiv.style.color = '#28a745';
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <strong>✗ Backend Connection Failed</strong><br>
+                    Error: ${error.message}<br>
+                    <br>
+                    Make sure backend is running on port 5000
+                `;
+                statusDiv.style.color = '#dc3545';
+            }
+        }
+
+        // Show current storage info on load
+        window.onload = () => {
+            console.log('LocalStorage items:', Object.keys(localStorage));
+            console.log('SessionStorage items:', Object.keys(sessionStorage));
+        };
+    </script>
+</body>
+</html>
