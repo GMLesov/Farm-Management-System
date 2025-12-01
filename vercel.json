@@ -1,9 +1,0 @@
-{
-  "buildCommand": "npm install && npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install",
-  "env": {
-    "REACT_APP_API_URL": "http://localhost:5000",
-    "REACT_APP_SOCKET_URL": "ws://localhost:5000"
-  }
-}
