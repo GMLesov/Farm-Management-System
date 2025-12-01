@@ -37,3 +37,6 @@ mobile/metro.config.js.bak
 
 # Keep APK releases (we'll track these)
 !mobile/releases/*.apk
+
+# Firebase credentials
+firebase-service-account*.json
