@@ -1,0 +1,330 @@
+import { Router } from 'express';
+import { NotificationController } from '../controllers/notificationController';
+import { authMiddleware } from '../middleware/auth';
+
+const router = Router();
+
+// All routes require authentication
+router.use(authMiddleware);
+
+/**
+ * @swagger
+ * /api/notifications:
+ *   get:
+ *     summary: Get notifications for the user's farm
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of notifications to return
+ *       - in: query
+ *         name: unread_only
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Return only unread notifications
+ *     responses:
+ *       200:
+ *         description: List of notifications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     notifications:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Notification'
+ *                     unreadCount:
+ *                       type: integer
+ */
+router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const farmId = req.user?.farmId || req.query.farmId as string;
+    if (!farmId) {
+      res.status(400).json({
+        success: false,
+        message: 'Farm ID is required'
+      });
+      return;
+    }
+
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    const unreadOnly = req.query.unread_only === 'true';
+
+    let notifications = notificationService.getFarmNotifications(farmId, limit);
+
+    if (unreadOnly) {
+      notifications = notifications.filter(n => !n.metadata?.read);
+    }
+
+    const unreadCount = notificationService.getUnreadCount(farmId);
+
+    res.json({
+      success: true,
+      data: {
+        notifications,
+        unreadCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notifications/{id}/read:
+ *   patch:
+ *     summary: Mark a notification as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification marked as read
+ *       404:
+ *         description: Notification not found
+ */
+router.patch('/:id/read', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Notification ID is required'
+      });
+      return;
+    }
+
+    const success = notificationService.markNotificationRead(id);
+
+    if (!success) {
+      res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Notification marked as read'
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark notification as read'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notifications/{id}:
+ *   delete:
+ *     summary: Clear/delete a notification
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification deleted
+ *       404:
+ *         description: Notification not found
+ */
+router.delete('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Notification ID is required'
+      });
+      return;
+    }
+
+    const success = notificationService.clearNotification(id);
+
+    if (!success) {
+      res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Notification deleted'
+    });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete notification'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notifications/test:
+ *   post:
+ *     summary: Send a test notification (development only)
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               type:
+ *                 type: string
+ *                 enum: [animal_health, feed_alert, veterinary_reminder, breeding_update, system_alert]
+ *               title:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *               severity:
+ *                 type: string
+ *                 enum: [low, medium, high, critical]
+ *                 default: medium
+ *     responses:
+ *       200:
+ *         description: Test notification sent
+ */
+router.post('/test', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // Only allow in development
+    if (process.env.NODE_ENV === 'production') {
+      res.status(403).json({
+        success: false,
+        message: 'Test notifications not allowed in production'
+      });
+      return;
+    }
+
+    const { type, title, message, severity = 'medium' } = req.body;
+    const farmId = req.user?.farmId || req.query.farmId as string;
+
+    if (!farmId) {
+      res.status(400).json({
+        success: false,
+        message: 'Farm ID is required'
+      });
+      return;
+    }
+
+    await notificationService.notifySystemAlert(farmId, title, message, severity);
+
+    res.json({
+      success: true,
+      message: 'Test notification sent'
+    });
+  } catch (error) {
+    console.error('Error sending test notification:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send test notification'
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/notifications/status:
+ *   get:
+ *     summary: Get real-time connection status and farm statistics
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Connection status and statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     connectedFarms:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     connectionCounts:
+ *                       type: object
+ *                     userOnline:
+ *                       type: boolean
+ */
+router.get('/status', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const farmId = req.user?.farmId || req.query.farmId as string;
+
+    const connectedFarms = socketServer.getConnectedFarms();
+    const connectionCounts: Record<string, number> = {};
+    
+    connectedFarms.forEach(fId => {
+      connectionCounts[fId] = socketServer.getFarmConnectionCount(fId);
+    });
+
+    const userOnline = userId ? socketServer.isUserOnline(userId) : false;
+
+    res.json({
+      success: true,
+      data: {
+        connectedFarms,
+        connectionCounts,
+        userOnline,
+        currentFarmConnections: farmId ? socketServer.getFarmConnectionCount(farmId) : 0
+      }
+    });
+  } catch (error) {
+    console.error('Error getting connection status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get connection status'
+    });
+  }
+});
+
+export default router;
