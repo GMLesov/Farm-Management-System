@@ -1,10 +1,22 @@
 {
-  "buildCommand": "cd web-dashboard && npm install && npm run build",
-  "outputDirectory": "web-dashboard/build",
-  "installCommand": "npm install",
-  "framework": "react",
+  "version": 2,
+  "builds": [
+    {
+      "src": "web-dashboard/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/web-dashboard/$1"
+    }
+  ],
   "env": {
-    "REACT_APP_API_URL": "@api_url",
-    "REACT_APP_SOCKET_URL": "@socket_url"
+    "REACT_APP_API_URL": "https://farm-management-api.onrender.com",
+    "REACT_APP_SOCKET_URL": "wss://farm-management-api.onrender.com"
   }
 }
