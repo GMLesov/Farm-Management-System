@@ -1,22 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "web-dashboard/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/web-dashboard/$1"
-    }
-  ],
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
   "env": {
-    "REACT_APP_API_URL": "https://farm-management-api.onrender.com",
-    "REACT_APP_SOCKET_URL": "wss://farm-management-api.onrender.com"
+    "REACT_APP_API_URL": "http://localhost:5000",
+    "REACT_APP_SOCKET_URL": "ws://localhost:5000"
   }
 }
