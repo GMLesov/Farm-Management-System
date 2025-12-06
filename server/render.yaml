@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: farm-management-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: ADMIN_DEFAULT_EMAIL
+        value: admin@farm.com
+      - key: ADMIN_DEFAULT_PASSWORD
+        value: password123
+      - key: WORKER_DEFAULT_PASSWORD
+        value: Farm@2024
