@@ -37,9 +37,29 @@ const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+// CORS configuration - allow both development and production origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'https://farm-management-system-4w71.vercel.app'
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3002'],
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

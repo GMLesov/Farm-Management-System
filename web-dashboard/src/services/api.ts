@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -11,7 +12,7 @@ export class ApiService {
   private api: AxiosInstance;
   private baseURL: string;
 
-  constructor(baseURL: string = process.env.REACT_APP_API_URL || '/api') {
+  constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
     this.api = axios.create({
       baseURL,

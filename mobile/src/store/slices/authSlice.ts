@@ -1,28 +1,34 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { auth, firestore } from '../../services/firebase';
 import { User, AuthState } from '../../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { API_CONFIG } from '../../config/constants';
 
 // Async thunks
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }: { email: string; password: string }) => {
     try {
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
-      const userDoc = await firestore()
-        .collection('users')
-        .doc(userCredential.user.uid)
-        .get();
+      console.log('Attempting login to:', `${API_CONFIG.BASE_URL}/api/auth/login`);
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/api/auth/login`, {
+        email,
+        password,
+      });
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-        await AsyncStorage.setItem('userRole', userData.role);
-        return userData;
-      } else {
-        throw new Error('User data not found');
-      }
+      console.log('Login response:', response.data);
+      const { user, token } = response.data;
+      
+      // Store token and user data
+      await AsyncStorage.setItem('@farm_auth_token', token);
+      await AsyncStorage.setItem('@farm_user_data', JSON.stringify(user));
+      await AsyncStorage.setItem('userRole', user.role);
+      
+      return user;
     } catch (error: any) {
-      throw new Error(error.message);
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      const message = error.response?.data?.message || error.message || 'Login failed';
+      throw new Error(message);
     }
   }
 );
@@ -43,26 +49,25 @@ export const signupUser = createAsyncThunk(
     farmId?: string;
   }) => {
     try {
-      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
-      const userData: User = {
-        uid: userCredential.user.uid,
+      const response = await axios.post(`${API_CONFIG.BASE_URL}/api/auth/register`, {
         email,
+        password,
         name,
         role,
         farmId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      await firestore()
-        .collection('users')
-        .doc(userCredential.user.uid)
-        .set(userData);
-
+      });
+      
+      const { user, token } = response.data;
+      
+      // Store token and user data
+      await AsyncStorage.setItem('@farm_auth_token', token);
+      await AsyncStorage.setItem('@farm_user_data', JSON.stringify(user));
       await AsyncStorage.setItem('userRole', role);
-      return userData;
+      
+      return user;
     } catch (error: any) {
-      throw new Error(error.message);
+      const message = error.response?.data?.message || error.message || 'Signup failed';
+      throw new Error(message);
     }
   }
 );
@@ -71,7 +76,9 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async () => {
     try {
-      await auth().signOut();
+      // Clear all stored auth data
+      await AsyncStorage.removeItem('@farm_auth_token');
+      await AsyncStorage.removeItem('@farm_user_data');
       await AsyncStorage.removeItem('userRole');
     } catch (error: any) {
       throw new Error(error.message);
@@ -83,16 +90,11 @@ export const getCurrentUser = createAsyncThunk(
   'auth/getCurrentUser',
   async () => {
     try {
-      const currentUser = auth().currentUser;
-      if (currentUser) {
-        const userDoc = await firestore()
-          .collection('users')
-          .doc(currentUser.uid)
-          .get();
-        
-        if (userDoc.exists()) {
-          return userDoc.data() as User;
-        }
+      const token = await AsyncStorage.getItem('@farm_auth_token');
+      const userData = await AsyncStorage.getItem('@farm_user_data');
+      
+      if (token && userData) {
+        return JSON.parse(userData) as User;
       }
       return null;
     } catch (error: any) {

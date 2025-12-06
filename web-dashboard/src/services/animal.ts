@@ -21,7 +21,7 @@ class AnimalService {
   private isDevelopment: boolean;
 
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     this.isDevelopment = process.env.NODE_ENV === 'development';
     
     // Setup axios interceptors for authentication
