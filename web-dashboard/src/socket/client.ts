@@ -1,8 +1,5 @@
 import { io, Socket } from 'socket.io-client';
 import { store } from '../store';
-import { setAnimals } from '../store/slices/animalsSlice';
-import { setCrops } from '../store/slices/cropsSlice';
-import { setTasks } from '../store/slices/tasksSlice';
 import { addNotification } from '../store/slices/uiSlice';
 
 class SocketClient {

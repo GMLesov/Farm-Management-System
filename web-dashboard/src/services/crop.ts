@@ -4,10 +4,7 @@ import {
   CropResponse,
   CropsResponse,
   CropTask,
-  CropTaskResponse,
-  CropTasksResponse,
   WorkerAssignment,
-  WorkerAssignmentResponse,
   CropAnalytics,
   CropPrediction,
   CropSearchParams,
@@ -857,4 +854,5 @@ class CropService {
   }
 }
 
-export default new CropService();
+const cropService = new CropService();
+export default cropService;
