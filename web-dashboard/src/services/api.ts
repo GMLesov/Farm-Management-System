@@ -16,7 +16,7 @@ export class ApiService {
     this.baseURL = baseURL;
     this.api = axios.create({
       baseURL,
-      timeout: 30000,
+      timeout: 90000, // 90 seconds to handle Render free tier cold starts
       headers: {
         'Content-Type': 'application/json',
       },
