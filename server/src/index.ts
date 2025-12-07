@@ -129,6 +129,10 @@ const startServer = async () => {
   try {
     await connectDB();
     
+    // Create default admin user if it doesn't exist
+    const { createDefaultAdmin } = await import('./utils/createDefaultAdmin');
+    await createDefaultAdmin();
+    
     // Create HTTP server
     const httpServer = createServer(app);
     
