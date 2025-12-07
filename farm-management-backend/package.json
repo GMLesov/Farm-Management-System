@@ -19,7 +19,8 @@
     "docker:run": "docker run -p 3000:3000 farm-management-api",
     "seed": "cross-env NODE_ENV=development node -r ts-node/register -r tsconfig-paths/register src/seeds/index.ts",
     "backup": "cross-env NODE_ENV=development node -r ts-node/register -r tsconfig-paths/register src/seeds/backup.ts",
-    "migrate": "cross-env NODE_ENV=development node -r ts-node/register -r tsconfig-paths/register src/seeds/migrate.ts"
+    "migrate": "cross-env NODE_ENV=development node -r ts-node/register -r tsconfig-paths/register src/seeds/migrate.ts",
+    "create-admin": "node create-admin.js"
   },
   "keywords": [
     "farm-management",
