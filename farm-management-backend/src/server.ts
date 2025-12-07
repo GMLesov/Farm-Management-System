@@ -173,6 +173,10 @@ const startServer = async (): Promise<void> => {
     await connectDB();
     logger.info('✅ Database connected successfully');
 
+    // Create default admin user if it doesn't exist
+    const { createDefaultAdmin } = await import('@/utils/createDefaultAdmin');
+    await createDefaultAdmin();
+
     // Connect to Redis (if configured)
     try {
       const redis = await connectRedis();

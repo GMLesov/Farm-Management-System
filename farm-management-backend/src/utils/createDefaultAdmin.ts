@@ -1,0 +1,47 @@
+import bcrypt from 'bcryptjs';
+import { User } from '@/models/User';
+import { logger } from '@/utils/logger';
+
+/**
+ * Creates a default admin user if one doesn't exist
+ * Uses environment variables for credentials
+ */
+export async function createDefaultAdmin(): Promise<void> {
+  try {
+    const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@farm.com';
+    const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'password123';
+
+    // Check if admin user already exists
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    
+    if (existingAdmin) {
+      logger.info(`✅ Admin user already exists: ${adminEmail}`);
+      return;
+    }
+
+    // Create new admin user
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+    
+    const admin = new User({
+      email: adminEmail,
+      password: hashedPassword,
+      firstName: 'Admin',
+      lastName: 'User',
+      role: 'admin',
+      phone: '+254700000000',
+      isActive: true,
+      emailVerified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await admin.save();
+    
+    logger.info(`✅ Default admin user created successfully: ${adminEmail}`);
+    logger.info('🔐 Admin credentials set from environment variables');
+    
+  } catch (error) {
+    logger.error('❌ Error creating default admin user:', error);
+    // Don't throw - allow server to start even if admin creation fails
+  }
+}
